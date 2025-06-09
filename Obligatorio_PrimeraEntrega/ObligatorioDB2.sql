@@ -238,6 +238,7 @@ INSERT INTO Calificacion (EstudianteID, CursoID, Nota) VALUES
 (3, 2, (50 + 60 + 55 + 45 + 50 + 40) / 6.0);  -- No aprobado
 GO
 
+
 -- Certificacion
 INSERT INTO Certificacion (EstudianteID, CursoID, FechaEmision) VALUES
 (1, 1, '2024-03-01');  -- Certificación entregada solo al estudiante 1
