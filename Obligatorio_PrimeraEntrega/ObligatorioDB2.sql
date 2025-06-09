@@ -11,7 +11,8 @@ CREATE TABLE Docentes (
     Nombre VARCHAR(50) NOT NULL,
     Apellido VARCHAR(50) NOT NULL,
     Correo VARCHAR(50) UNIQUE NOT NULL,
-    FechaRegistro DATE NOT NULL
+    FechaRegistro DATE NOT NULL,
+	Activo BIT NOT NULL CHECK (Activo IN(0,1)),
 );
 GO
 
@@ -31,9 +32,8 @@ CREATE TABLE Modulos (
     ModuloID INT PRIMARY KEY IDENTITY,
     CursoID INT NOT NULL,
     Titulo VARCHAR(50) NOT NULL,
-    Descripcion VARCHAR(50) NOT NULL,
+    Descripcion VARCHAR(MAX) NOT NULL,
     Orden INT NOT NULL,
-    NotaMaxima DECIMAL(5,2) NOT NULL DEFAULT 0,
     FOREIGN KEY (CursoID) REFERENCES Cursos(CursoID)
 );
 GO
@@ -42,7 +42,9 @@ CREATE TABLE Clases (
     ClaseID INT PRIMARY KEY IDENTITY,
     ModuloID INT NOT NULL,
     Titulo VARCHAR(50) NOT NULL,
-    Descripcion VARCHAR(50) NOT NULL,
+    Descripcion VARCHAR(MAX) NOT NULL,
+	Orden INT NOT NULL,
+	Activo BIT CHECK(Activo IN(0,1)) NOT NULL DEFAULT 1 
     FOREIGN KEY (ModuloID) REFERENCES Modulos(ModuloID)
 );
 GO
@@ -54,15 +56,6 @@ CREATE TABLE Estudiantes (
     Correo VARCHAR(50) UNIQUE NOT NULL,
     FechaRegistro DATE NOT NULL DEFAULT GETDATE(),
     Activo BIT CHECK(Activo IN(0,1)) NOT NULL DEFAULT 1
-);
-GO
-
-CREATE TABLE EstudiantesCursos (
-    CursoID INT NOT NULL,
-    EstudianteID INT NOT NULL,
-    PRIMARY KEY (CursoID, EstudianteID),
-    FOREIGN KEY (CursoID) REFERENCES Cursos(CursoID),
-    FOREIGN KEY (EstudianteID) REFERENCES Estudiantes(EstudianteID)
 );
 GO
 
@@ -87,6 +80,7 @@ CREATE TABLE EstudiantesClases (
 GO
 
 CREATE TABLE Inscripcion (
+	-- Ver si en esta tabla sacar el curso, ya que la inscripcion es a la plataforma
     InscripcionID INT PRIMARY KEY IDENTITY,
     EstudianteID INT NOT NULL,
     CursoID INT NOT NULL,
@@ -97,6 +91,7 @@ CREATE TABLE Inscripcion (
 GO
 
 CREATE TABLE Progreso (
+	-- Se repite información entre el apartado de inscripciones y progreso. Podría optimizarse el texto y clarificar si ambas son necesarias o si se superponen en funcionalidad.
     ProgresoID INT PRIMARY KEY IDENTITY,
     EstudianteID INT NOT NULL,
     CursoID INT NOT NULL,
