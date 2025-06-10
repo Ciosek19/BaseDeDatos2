@@ -238,3 +238,132 @@ GO
 INSERT INTO Certificacion (EstudianteID, CursoID, FechaEmision) VALUES
 (1, 1, '2024-03-01');  -- Certificación entregada solo al estudiante 1
 GO
+
+
+
+--  Stored Procedure para nuevo alumno
+
+CREATE PROCEDURE NuevoAlumno @nombre varchar(50), @apellido varchar(50),@correo varchar(50) 
+AS
+BEGIN 
+	BEGIN TRANSACTION 
+		BEGIN TRY
+
+		IF exists (SELECT 1 FROM Estudiantes WHERE Correo = TRIM(@correo))
+			THROW 50001, 'Usuario ya existente',1
+
+		INSERT INTO Estudiantes(Nombre,Apellido,Correo,FechaRegistro,Activo)
+		VALUES (TRIM(@nombre),TRIM(@apellido),TRIM(@correo),GETDATE(),1)
+
+		COMMIT;
+		END TRY
+
+		BEGIN CATCH
+		ROLLBACK;
+		PRINT 'ERROR :' + Error_Message()
+
+		END CATCH
+END
+
+-- Ejecucion Stored Procedure
+
+DECLARE @nombreNuevo varchar(50)='Ramiro';
+DECLARE @apellidoNuevo varchar(50)= 'Alonso'
+DECLARE @correoNuevo varchar(50) = 'ramrio.alonso@example.com'
+
+EXEC NuevoAlumno @nombre= @nombreNuevo, @apellido= @apellidoNuevo, @correo= @correoNuevo;
+
+
+
+--  Stored Procedure para nueva inscripcion
+
+CREATE PROCEDURE InscripcionCurso @estudianteID int, @cursoID int
+AS
+BEGIN
+	BEGIN TRANSACTION
+	BEGIN TRY
+
+		IF not exists (SELECT 1 FROM Cursos WHERE CursoID = @cursoID)
+			THROW 50001, 'El curso ingresado no existe',1
+
+		IF not exists (SELECT 1 FROM Estudiantes WHERE EstudianteID = @estudianteID)
+			THROW 50002, 'El estudiante ingresado no existe',1
+
+
+		IF exists (SELECT 1 FROM Inscripcion WHERE EstudianteID =@estudianteID AND CursoID =@cursoID)
+			THROW 50003, 'Este estudiante ya se encuentra inscripto en el curso',1
+
+		INSERT INTO Inscripcion(EstudianteID,CursoID,FechaInscripcion)
+		VALUES(@estudianteID,@cursoID,GETDATE())
+
+		COMMIT;
+	END TRY
+
+	BEGIN CATCH
+		ROLLBACK;
+		PRINT 'ERROR :' + ERROR_MESSAGE()
+	END CATCH
+END
+
+
+-- Ejecucion Stored Procedure
+
+DECLARE @estudianteIDNuevo int = 1
+DECLARE @cursoIDNuevo int = 3
+
+EXEC InscripcionCurso @estudianteID= @estudianteIDNuevo, @cursoID= @cursoIDNuevo
+
+
+
+
+--  Stored Procedure para nueva certificacion
+
+CREATE PROCEDURE GenerarCertificacion @estudianteID int, @cursoID int 
+AS
+BEGIN 
+	BEGIN TRANSACTION
+		BEGIN TRY
+		IF not exists (SELECT 1 FROM Cursos WHERE CursoID = @cursoID)
+			THROW 50001, 'El curso ingresado no existe',1
+
+		IF not exists (SELECT 1 FROM Estudiantes WHERE EstudianteID = @estudianteID)
+			THROW 50002, 'El estudiante ingresado no existe',1
+
+		IF exists(SELECT 1 FROM Certificacion WHERE  EstudianteID = @estudianteID AND CursoID = @cursoID)
+			THROW 50003,'La certificacion ya existe',1
+
+		IF not exists(SELECT 1 FROM Calificacion WHERE  EstudianteID = @estudianteID AND CursoID = @cursoID)
+			THROW 50004, ' Este estudiante no tiene calificaciones',1
+
+		DECLARE @notaAlumno int
+		SELECT @notaAlumno = Nota FROM Calificacion WHERE EstudianteID = @estudianteID AND CursoID = @cursoID
+
+		DECLARE @minimaCurso int
+		SELECT @minimaCurso = NotaMinima FROM Cursos WHERE CursoID = @cursoID
+
+		IF( @notaAlumno >= @minimaCurso)
+			BEGIN
+
+			INSERT INTO Certificacion(EstudianteID,CursoID,FechaEmision)
+			VALUES(@estudianteID,@cursoID,GETDATE())
+
+			END 
+		COMMIT;
+
+		END TRY
+		BEGIN CATCH
+		ROLLBACK
+		PRINT 'ERROR: ' + ERROR_MESSAGE()
+		END CATCH
+END
+
+-- Ejecucion Stored Procedure
+
+DECLARE @estudianteIDNuevo int = 1
+DECLARE @cursoIDNuevo int = 1
+
+EXEC GenerarCertificacion @estudianteID= @estudianteIDNuevo, @cursoID= @cursoIDNuevo
+
+
+
+ 
