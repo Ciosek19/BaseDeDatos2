@@ -80,7 +80,6 @@ CREATE TABLE EstudiantesClases (
 GO
 
 CREATE TABLE Inscripcion (
-	-- Ver si en esta tabla sacar el curso, ya que la inscripcion es a la plataforma
     InscripcionID INT PRIMARY KEY IDENTITY,
     EstudianteID INT NOT NULL,
     CursoID INT NOT NULL,
@@ -91,7 +90,6 @@ CREATE TABLE Inscripcion (
 GO
 
 CREATE TABLE Progreso (
-	-- Se repite información entre el apartado de inscripciones y progreso. Podría optimizarse el texto y clarificar si ambas son necesarias o si se superponen en funcionalidad.
     ProgresoID INT PRIMARY KEY IDENTITY,
     EstudianteID INT NOT NULL,
     CursoID INT NOT NULL,
