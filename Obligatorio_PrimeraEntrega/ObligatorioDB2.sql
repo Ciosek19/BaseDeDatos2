@@ -11,8 +11,8 @@ CREATE TABLE Docentes (
     Nombre VARCHAR(50) NOT NULL,
     Apellido VARCHAR(50) NOT NULL,
     Correo VARCHAR(50) UNIQUE NOT NULL,
-    FechaRegistro DATE NOT NULL,
-	Activo BIT NOT NULL CHECK (Activo IN(0,1)),
+    FechaRegistro DATE NOT NULL DEFAULT GETDATE(),
+	Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 1,
 );
 GO
 
@@ -20,10 +20,10 @@ CREATE TABLE Cursos (
     CursoID INT PRIMARY KEY IDENTITY,
     DocenteID INT NOT NULL,
     Titulo VARCHAR(50) NOT NULL,
-    Descripcion VARCHAR(50) NOT NULL,
+    Descripcion VARCHAR(MAX) NOT NULL,
     Duracion INT NOT NULL,
-    Estado BIT NOT NULL CHECK (Estado IN(0,1)),
     NotaMinima DECIMAL(5,2) NOT NULL,
+    Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 0,
     FOREIGN KEY (DocenteID) REFERENCES Docentes(DocenteID)
 );
 GO
@@ -34,6 +34,7 @@ CREATE TABLE Modulos (
     Titulo VARCHAR(50) NOT NULL,
     Descripcion VARCHAR(MAX) NOT NULL,
     Orden INT NOT NULL,
+	Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 1,
     FOREIGN KEY (CursoID) REFERENCES Cursos(CursoID)
 );
 GO
@@ -44,7 +45,7 @@ CREATE TABLE Clases (
     Titulo VARCHAR(50) NOT NULL,
     Descripcion VARCHAR(MAX) NOT NULL,
 	Orden INT NOT NULL,
-	Activo BIT CHECK(Activo IN(0,1)) NOT NULL DEFAULT 1 
+	Activo BIT CHECK(Activo IN(0,1)) NOT NULL DEFAULT 1,
     FOREIGN KEY (ModuloID) REFERENCES Modulos(ModuloID)
 );
 GO
@@ -72,7 +73,7 @@ GO
 CREATE TABLE EstudiantesClases (
     ClaseID INT NOT NULL,
     EstudianteID INT NOT NULL,
-    Visto BIT CHECK(Visto IN(0,1)) NOT NULL,
+    Visto BIT CHECK(Visto IN(0,1)) NOT NULL DEFAULT 0,
     PRIMARY KEY (ClaseID, EstudianteID),
     FOREIGN KEY (ClaseID) REFERENCES Clases(ClaseID),
     FOREIGN KEY (EstudianteID) REFERENCES Estudiantes(EstudianteID)
@@ -119,7 +120,7 @@ CREATE TABLE Certificacion (
 );
 GO
 
--- /////// CREACION DE DATOS /////// --
+ --/////// CREACION DE DATOS /////// --
 
 -- DOCENTES
 INSERT INTO Docentes (Nombre, Apellido, Correo, FechaRegistro, Activo) VALUES
@@ -127,7 +128,7 @@ INSERT INTO Docentes (Nombre, Apellido, Correo, FechaRegistro, Activo) VALUES
 ('José', 'Fernández', 'jose.fernandez@edu.com', '2024-01-02', 1);
 
 -- CURSOS
-INSERT INTO Cursos (DocenteID, Titulo, Descripcion, Duracion, Estado, NotaMinima) VALUES
+INSERT INTO Cursos (DocenteID, Titulo, Descripcion, Duracion, Activo, NotaMinima) VALUES
 (1, 'Curso de Matemáticas Básicas', 'Curso introductorio a las matemáticas', 60, 1, 70.00),
 (2, 'Curso de Física General', 'Curso básico de física aplicada', 60, 1, 70.00);
 
@@ -242,7 +243,7 @@ DECLARE @apellidoNuevo varchar(50)= 'Alonso'
 DECLARE @correoNuevo varchar(50) = 'ramrio.alonso@example.com'
 
 EXEC NuevoAlumno @nombre= @nombreNuevo, @apellido= @apellidoNuevo, @correo= @correoNuevo;
-
+SELECT * FROM Estudiantes
 
 
 --  Stored Procedure para nueva inscripcion
@@ -279,12 +280,14 @@ END
 -- Ejecucion Stored Procedure
 
 DECLARE @estudianteIDNuevo int = 1
-DECLARE @cursoIDNuevo int = 3
+DECLARE @cursoIDNuevo int = 2
 
-EXEC InscripcionCurso @estudianteID= @estudianteIDNuevo, @cursoID= @cursoIDNuevo
+EXEC InscripcionCurso 
+@estudianteID= @estudianteIDNuevo,
+@cursoID= @cursoIDNuevo
 
-
-
+SELECT * FROM Inscripcion
+SELEcT * FROM Cursos
 
 --  Stored Procedure para nueva certificacion
 
@@ -335,5 +338,113 @@ DECLARE @cursoIDNuevo int = 1
 EXEC GenerarCertificacion @estudianteID= @estudianteIDNuevo, @cursoID= @cursoIDNuevo
 
 
+-- Stored Procedure para nuevo docente
+CREATE PROCEDURE NuevoDocente 
+@nombre NVARCHAR(50),
+@apellido NVARCHAR(50),
+@correo NVARCHAR(50)
+AS
+BEGIN
+	BEGIN TRANSACTION
+	BEGIN TRY
+		IF EXISTS (SELECT 1 FROM Docentes WHERE Correo = TRIM(@correo))
+			THROW 50001, 'Este correo ya fue registrado',1;
+		INSERT INTO Docentes (Nombre,Apellido,Correo)
+		VALUES (TRIM(@nombre), TRIM(@apellido), TRIM(@correo))
+		COMMIT;
+	END TRY
+	BEGIN CATCH
+		PRINT 'ERROR: ' + ERROR_MESSAGE()
+		ROLLBACK;
+	END CATCH
+END
+-- Ejecucion
+DECLARE @nombreDocente VARCHAR(50)= 'Jose';
+DECLARE @apellidoDocente VARCHAR(50) = 'Lopez';
+DECLARE @correoDocente VARCHAR(50) = 'Joselopez@correo.com'
 
- 
+EXEC NuevoDocente 
+@nombre = @nombreDocente, 
+@apellido = @apellidoDocente, 
+@correo = @correoDocente;
+
+SELECT * FROM Docentes
+
+
+-- Stored Procedure crear curso asociado a un docente
+CREATE PROCEDURE CrearCurso
+@docenteId INT,
+@titulo VARCHAR(50),
+@descripcion VARCHAR(MAX),
+@duracion INT,
+@notaMinima DECIMAL(5,2)
+AS 
+BEGIN
+	BEGIN TRANSACTION
+	BEGIN TRY
+		IF NOT EXISTS (SELECT 1 FROM Docentes WHERE DocenteID = @docenteId)
+			THROW 50001, 'El docente no existe',1;
+		INSERT INTO Cursos (DocenteID,Titulo,Descripcion,Duracion,NotaMinima)
+		VALUES (@docenteId,@titulo,@descripcion,@duracion,@notaMinima)
+		COMMIT;
+	END TRY
+	BEGIN CATCH
+		PRINT 'ERROR: ' + ERROR_MESSAGE()
+		ROLLBACK
+	END CATCH
+END
+
+-- Ejecucion
+DECLARE @docenteIdRef INT = 1;
+DECLARE @tituloCurso VARCHAR(50) = 'Titulo Ejemplo';
+DECLARE @descripcionCurso VARCHAR(MAX) = 'Descripcion ejemplo';
+DECLARE @duracionCurso INT = 65;
+DECLARE @notaMinimaCurso DECIMAL(5,2) = 75;
+
+EXEC CrearCurso 
+@docenteId = @docenteIdRef, 
+@titulo = @tituloCurso, 
+@descripcion = @descripcionCurso, 
+@duracion = @duracionCurso, 
+@notaMinima = @notaMinimaCurso
+
+SELECT * FROM Cursos
+
+-- Stored Procedure para actualizar la calificacion final de un estudiante
+--	para un curso tomando en cuenta los puntos de modulos/clases y la nota
+--	minima para aprobar
+
+CREATE PROCEDURE ActualizarCalificacionEstudiante
+@estudianteID INT,
+@cursoID INT
+AS
+BEGIN
+	BEGIN TRANSACTION
+	BEGIN TRY
+		IF NOT EXISTS (SELECT 1 FROM Estudiantes WHERE EstudianteID = @estudianteID)
+			THROW 50001, 'El estudiante no existe',1;
+		IF NOT EXISTS (SELECT 1 FROM Cursos WHERE CursoID = @cursoID)
+			THROW 50002, 'El curso no existe',1;
+		IF NOT EXISTS (SELECT 1 FROM Inscripcion WHERE EstudianteID = @estudianteID AND CursoID = @cursoID)
+			THROW 50003, 'El estudiante no se ha inscrito en ese curso',1;
+		IF EXISTS (SELECT 1 FROM dbo.fnExamenesPendientesTabla(@estudianteID,@cursoID))
+			THROW 50004, 'El estudiante no ha completado el curso',1;
+		UPDATE Calificacion 
+		SET Nota = dbo.fnCalificacionEstudianteCurso(@estudianteID,@cursoID)
+		WHERE CursoID = @cursoID AND EstudianteID = @estudianteID
+		COMMIT;
+	END TRY
+	BEGIN CATCH
+		PRINT 'ERROR: ' + ERROR_MESSAGE()
+		ROLLBACK
+	END CATCH
+END
+
+-- Ejecucion
+DECLARE @estudianteIdPrueba INT = 1;
+DECLARE @cursoIdPrueba INT = 1;
+EXEC ActualizarCalificacionEstudiante 
+@estudianteID = @estudianteIdPrueba,
+@cursoID = @cursoIdPrueba
+SELECT * FROM Calificacion WHERE EstudianteID = 1
+
