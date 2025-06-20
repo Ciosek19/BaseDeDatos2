@@ -78,21 +78,12 @@ CREATE TABLE EstudiantesClases (
 );
 GO
 
-CREATE TABLE Inscripcion (
+ALTER TABLE Inscripcion (
     InscripcionID INT PRIMARY KEY IDENTITY,
     EstudianteID INT NOT NULL,
     CursoID INT NOT NULL,
     FechaInscripcion DATE NOT NULL DEFAULT GETDATE(),
-    FOREIGN KEY (EstudianteID) REFERENCES Estudiantes(EstudianteID),
-    FOREIGN KEY (CursoID) REFERENCES Cursos(CursoID)
-);
-GO
-
-CREATE TABLE Progreso (
-    ProgresoID INT PRIMARY KEY IDENTITY,
-    EstudianteID INT NOT NULL,
-    CursoID INT NOT NULL,
-    PorcentajeAvance DECIMAL(5,2) NOT NULL DEFAULT 0,
+	PorcentajeAvance DECIMAL(5,2) NOT NULL DEFAULT 0,
     FOREIGN KEY (EstudianteID) REFERENCES Estudiantes(EstudianteID),
     FOREIGN KEY (CursoID) REFERENCES Cursos(CursoID)
 );
@@ -446,3 +437,22 @@ EXEC ActualizarCalificacionEstudiante
 @cursoID = @cursoIdPrueba
 SELECT * FROM Calificacion WHERE EstudianteID = 1
 
+
+-- Vista de “Cursos y su docente” con la nota mínima y el estado del curso. 
+
+CREATE VIEW vwCursosDisponibles
+AS
+SELECT c.Titulo, (d.Nombre +' '+ d.Apellido) AS NombreCompleto,c.NotaMinima,c.Estado FROM Cursos c 
+INNER JOIN Docentes d ON c.DocenteID=d.DocenteID;
+
+-- Vista de “Estudiantes, progreso y calificación en cada curso”. 
+
+CREATE VIEW vwEstudisntesPorCursos
+AS 
+SELECT c.Titulo,(e.Nombre + ' ' + e.Apellido) AS NombreCompleto,AVG(em.NotaExamen) AS TotalNotas,i.PorcentajeAvance
+FROM Inscripcion i
+INNER JOIN Estudiantes e ON i.EstudianteID = e.EstudianteID
+INNER JOIN Cursos c ON c.CursoID = i.CursoID
+INNER JOIN EstudiantesModulos em ON em.EstudianteID = e.EstudianteID
+INNER JOIN Modulos m ON m.ModuloID = em.ModuloID
+GROUP BY c.Titulo,e.Nombre,e.Apellido,i.PorcentajeAvance;
