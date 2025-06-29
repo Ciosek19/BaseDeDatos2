@@ -109,6 +109,47 @@ CREATE TABLE Certificacion (
 );
 GO
 
+CREATE TABLE AuditoriaDocentes(
+OperacionID INT PRIMARY KEY IDENTITY,
+Operacion VARCHAR(50) NOT NULL,
+Usuario VARCHAR(50) NOT NULL,
+Fecha DATE NOT NULL,
+DatosRelevantes VARCHAR(255) 
+);
+GO
+
+CREATE TABLE AuditoriaModulos(
+OperacionID INT PRIMARY KEY IDENTITY,
+Operacion VARCHAR(50) NOT NULL,
+Usuario VARCHAR(50) NOT NULL,
+Fecha DATE NOT NULL,
+DatosRelevantes VARCHAR(255)
+);
+GO
+CREATE TABLE AuditoriaEstudiantes(
+OperacionID INT PRIMARY KEY IDENTITY,
+Operacion VARCHAR(50) NOT NULL,
+Usuario VARCHAR(50) NOT NULL,
+Fecha DATE NOT NULL,
+DatosRelevantes VARCHAR(255)
+);
+GO
+CREATE TABLE AuditoriaEstudiantesClases(
+OperacionID INT PRIMARY KEY IDENTITY,
+Operacion VARCHAR(50) NOT NULL,
+Usuario VARCHAR(50) NOT NULL,
+Fecha DATE NOT NULL,
+DatosRelevantes VARCHAR(255)
+);
+GO
+CREATE TABLE AuditoriaCalificaciones(
+OperacionID INT PRIMARY KEY IDENTITY,
+Operacion VARCHAR(50) NOT NULL,
+Usuario VARCHAR(50) NOT NULL,
+Fecha DATE NOT NULL,
+DatosRelevantes VARCHAR(255)
+);
+GO
  --/////// CREACION DE DATOS /////// --
 
 ---- DOCENTES
@@ -456,3 +497,255 @@ INNER JOIN Cursos c ON c.CursoID = i.CursoID
 INNER JOIN EstudiantesModulos em ON em.EstudianteID = e.EstudianteID
 INNER JOIN Modulos m ON m.ModuloID = em.ModuloID
 GROUP BY c.Titulo,e.Nombre,e.Apellido,i.PorcentajeAvance;
+
+-- TRIGGER PARA DOCENTES
+CREATE TRIGGER trgDocentes
+ON Docentes
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+
+    -- Si hubo INSERT (hay datos en INSERTED pero no en DELETED)
+    IF EXISTS (SELECT 1 FROM INSERTED) AND NOT EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaDocentes(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'INSERT',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Nuevo docente insertado: '+ Correo) 
+        FROM INSERTED i;
+    END
+
+    -- Si hubo DELETE (hay datos en DELETED pero no en INSERTED)
+    ELSE IF NOT EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaDocentes(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+             'DELETED',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Docente eliminado: '+ Correo)
+        FROM DELETED;
+    END
+
+    -- Si hubo UPDATE (hay datos tanto en INSERTED como en DELETED)
+    ELSE IF EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO  AuditoriaDocentes(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'UPDATE',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Docente actualizado :'  +  i.Correo)
+        FROM INSERTED i
+        JOIN DELETED d ON i.DocenteID = d.DocenteID;
+    END
+END;
+
+
+-- TRIGGER PARA MODULOS
+CREATE TRIGGER trgModulos
+ON Modulos
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+
+    IF EXISTS (SELECT 1 FROM INSERTED) AND NOT EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaModulos(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'INSERT',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Nuevo modulo insertado: '+ Titulo ) 
+        FROM INSERTED i;
+    END
+
+    ELSE IF NOT EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaModulos(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+             'DELETED',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Modulo eliminado: '+ Titulo)
+        FROM DELETED;
+    END
+
+    ELSE IF EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO  AuditoriaModulos(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'UPDATE',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Modulo actualizado :'  +  i.Titulo)
+        FROM INSERTED i
+        JOIN DELETED d ON i.ModuloID = d.ModuloID;
+    END
+END;
+
+
+-- TRIGGER PARA ESTUDIANTES
+CREATE TRIGGER trgEstudiantes
+ON Estudiantes
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+
+    IF EXISTS (SELECT 1 FROM INSERTED) AND NOT EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaEstudiantes(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'INSERT',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Nuevo estudiante insertado: '+ Correo ) 
+        FROM INSERTED i;
+    END
+
+    ELSE IF NOT EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaEstudiantes(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+             'DELETED',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Estudiante eliminado: '+ Correo)
+        FROM DELETED;
+    END
+
+    ELSE IF EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO  AuditoriaEstudiantes(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'UPDATE',
+			SUSER_SNAME(),
+            GETDATE(),
+            ('Estudiante actualizado :'  +  i.Correo)
+        FROM INSERTED i
+        JOIN DELETED d ON i.EstudianteID = d.EstudianteID;
+    END
+END;
+
+-- TRIGGER PARA ESTUDIANTES_CLASES
+ALTER TRIGGER trgEstudiantesClases
+ON EstudiantesClases
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+
+    IF EXISTS (SELECT 1 FROM INSERTED) AND NOT EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaEstudiantesClases(Operacion,Usuario,Fecha)
+        SELECT
+            'INSERT',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM INSERTED i;
+    END
+
+    ELSE IF NOT EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaEstudiantesClases(Operacion,Usuario,Fecha)
+        SELECT
+             'DELETED',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM DELETED;
+    END
+
+    ELSE IF EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO  AuditoriaEstudiantesClases(Operacion,Usuario,Fecha)
+        SELECT
+            'UPDATE',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM INSERTED i
+        JOIN DELETED d ON i.EstudianteID = d.EstudianteID;
+    END
+END;
+
+
+-- TRIGGER PARA ESTUDIANTES_CLASES
+ALTER TRIGGER trgEstudiantesClases
+ON EstudiantesClases
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+
+    IF EXISTS (SELECT 1 FROM INSERTED) AND NOT EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaEstudiantesClases(Operacion,Usuario,Fecha)
+        SELECT
+            'INSERT',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM INSERTED i;
+    END
+
+    ELSE IF NOT EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaEstudiantesClases(Operacion,Usuario,Fecha)
+        SELECT
+             'DELETED',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM DELETED;
+    END
+
+    ELSE IF EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO  AuditoriaEstudiantesClases(Operacion,Usuario,Fecha)
+        SELECT
+            'UPDATE',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM INSERTED i
+        JOIN DELETED d ON i.EstudianteID = d.EstudianteID;
+    END
+END;
+
+
+-- TRIGGER PARA CALIFICACIONES
+CREATE TRIGGER trgCalificaciones
+ON Calificacion
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+
+    IF EXISTS (SELECT 1 FROM INSERTED) AND NOT EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaCalificaciones(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+            'INSERT',
+			SUSER_SNAME(),
+            GETDATE(),
+		  CONCAT('Nueva calificación insertada para: ', EstudianteID)      
+		  FROM INSERTED i;
+    END
+
+    ELSE IF NOT EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO AuditoriaCalificaciones(Operacion,Usuario,Fecha,DatosRelevantes)
+        SELECT
+             'DELETED',
+			SUSER_SNAME(),
+            GETDATE(),
+		  CONCAT('Eliminacion de calificación para: ', EstudianteID)      
+        FROM DELETED;
+    END
+
+    ELSE IF EXISTS (SELECT 1 FROM INSERTED) AND EXISTS (SELECT 1 FROM DELETED)
+    BEGIN
+        INSERT INTO  AuditoriaCalificaciones(Operacion,Usuario,Fecha)
+        SELECT
+            'UPDATE',
+			SUSER_SNAME(),
+            GETDATE()
+        FROM INSERTED i
+        JOIN DELETED d ON i.EstudianteID = d.EstudianteID;
+    END
+END;
