@@ -23,7 +23,7 @@ CREATE TABLE Cursos (
     Descripcion VARCHAR(MAX) NOT NULL,
     Duracion INT NOT NULL,
     NotaMinima DECIMAL(5,2) NOT NULL,
-    Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 0,
+    Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 1,
     FOREIGN KEY (DocenteID) REFERENCES Docentes(DocenteID)
 );
 GO
@@ -34,6 +34,7 @@ CREATE TABLE Modulos (
     Titulo VARCHAR(50) NOT NULL,
     Descripcion VARCHAR(MAX) NOT NULL,
     Orden INT NOT NULL,
+	Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 1,
     FOREIGN KEY (CursoID) REFERENCES Cursos(CursoID)
 );
 GO
@@ -44,6 +45,7 @@ CREATE TABLE Clases (
     Titulo VARCHAR(50) NOT NULL,
     Descripcion VARCHAR(MAX) NOT NULL,
 	Orden INT NOT NULL,
+    Activo BIT NOT NULL CHECK (Activo IN(0,1)) DEFAULT 1,
     FOREIGN KEY (ModuloID) REFERENCES Modulos(ModuloID)
 );
 GO
